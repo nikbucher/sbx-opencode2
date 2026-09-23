@@ -41,12 +41,12 @@ docker run --rm sbx-opencode2:local opencode --version   # -> 2.0.15
 
 [Renovate](https://docs.renovatebot.com/) opens PRs that update the pinned
 `@opencode/cli` version (restricted to the v2 major) and the pinned base image
-digest. After merging such a PR:
+digest. Low-risk updates (actions, base image digest, OpenCode minor/patch)
+are merged automatically once CI passes; major OpenCode updates only appear
+in the Renovate dependency dashboard.
 
-1. CI runs a smoke test (amd64 build + `opencode --version`) before publishing.
-2. `main` and `latest` are rebuilt automatically.
-3. To cut a release, tag the merged commit: `git tag v2.0.x && git push origin v2.0.x`.
-
+Every merge rebuilds `main` and `latest` (after the smoke test passes).
+To cut a release, tag the merged commit: `git tag v2.0.x && git push origin v2.0.x`.
 The tag must match `OPENCODE_VERSION` in the `Dockerfile` (without the `v` prefix).
 
 ## Files
