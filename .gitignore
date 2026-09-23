@@ -3,6 +3,7 @@
 !.gitattributes
 !.gitignore
 !.github/
+!.dockerignore
 
 *.tar
 .DS_Store

@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+  pull_request:
   workflow_dispatch:
 
 env:
@@ -29,11 +30,31 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to the Container registry
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Smoke test: build the amd64 image and verify the pinned OpenCode
+      # version runs before anything is published.
+      - name: Build amd64 image for smoke test
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: sbx-opencode2:smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test (opencode --version)
+        run: |
+          EXPECTED=$(sed -n 's/^ARG OPENCODE_VERSION=//p' Dockerfile)
+          ACTUAL=$(docker run --rm sbx-opencode2:smoke opencode --version)
+          echo "expected=v${EXPECTED} actual=${ACTUAL}"
+          echo "${ACTUAL}" | grep -q "v${EXPECTED}"
 
       - name: Extract metadata (tags, labels)
         id: meta
@@ -43,6 +64,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=ref,event=branch
+            type=ref,event=pr
+            type=sha
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
 
       - name: Build and push Docker image
@@ -51,11 +74,14 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Generate artifact attestation
+        if: github.event_name != 'pull_request'
         uses: actions/attest@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}

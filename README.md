@@ -14,6 +14,7 @@ sbx run --template ghcr.io/nikbucher/sbx-opencode2:2.0.15 opencode
 ```
 
 Images are built and pushed to GHCR by GitHub Actions on every `v*` tag.
+Tags: `2.0.15` (release), `latest`, `main`, `sha-<commit>`.
 If the package is still private, store pull credentials once:
 
 ```sh
@@ -38,14 +39,20 @@ docker run --rm sbx-opencode2:local opencode --version   # -> 2.0.15
 
 ## Bump the OpenCode version
 
-1. Update `OPENCODE_VERSION` in the `Dockerfile`.
-2. Commit and tag the commit: `git tag v2.0.x && git push origin main --tags`.
+[Renovate](https://docs.renovatebot.com/) opens PRs that update the pinned
+`@opencode/cli` version (restricted to the v2 major) and the pinned base image
+digest. After merging such a PR:
 
-The tag must match `OPENCODE_VERSION` (without the `v` prefix).
+1. CI runs a smoke test (amd64 build + `opencode --version`) before publishing.
+2. `main` and `latest` are rebuilt automatically.
+3. To cut a release, tag the merged commit: `git tag v2.0.x && git push origin v2.0.x`.
+
+The tag must match `OPENCODE_VERSION` in the `Dockerfile` (without the `v` prefix).
 
 ## Files
 
 | Path | Purpose |
 | ---- | ------- |
-| `Dockerfile` | Template image (multi-arch: amd64 + arm64) |
-| `.github/workflows/publish.yml` | Build + push to `ghcr.io` on tags and `main` |
+| `Dockerfile` | Template image (multi-arch: amd64 + arm64), base image pinned by digest |
+| `.github/workflows/publish.yml` | Smoke test + build + push to `ghcr.io` on tags, `main`, and PRs |
+| `renovate.json` | Automated update PRs (OpenCode version, base image digest, actions) |
