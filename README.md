@@ -10,7 +10,7 @@ The base image ships OpenCode V1 (npm package `opencode-ai`). This template swap
 sbx run --template ghcr.io/nikbucher/sbx-opencode2:2.0.15 opencode
 ```
 
-Images are built and pushed to GHCR by GitHub Actions on every `v*` tag. Tags: `2.0.15` (release), `latest`, `main`, `sha-<commit>`. If the package is still private, store pull credentials once:
+Images are built and pushed to GHCR by GitHub Actions on every push to `main` (PRs are built and smoke-tested but not pushed). Tags: `2.0.15` (the pinned OpenCode version), `latest`, `main`, `sha-<commit>`. Only `sha-<commit>` tags are immutable — every merge to `main` re-pushes the version and `latest` tags, so `2.0.15` means "OpenCode 2.0.15 on the current base image" rather than a fixed build. If the package is still private, store pull credentials once:
 
 ```sh
 gh auth token | sbx secret set --registry ghcr.io --password-stdin
@@ -34,14 +34,14 @@ docker run --rm sbx-opencode2:local opencode --version   # -> 2.0.15
 
 ## Bump the OpenCode version
 
-[Renovate](https://docs.renovatebot.com/) opens PRs that update the pinned `@opencode/cli` version (restricted to the v2 major) and the pinned base image digest. Low-risk updates (actions, base image digest, OpenCode minor/patch) are merged automatically once CI passes; major OpenCode updates only appear in the Renovate dependency dashboard.
+[Renovate](https://docs.renovatebot.com/) opens PRs that update the pinned `@opencode/cli` version and the pinned base image digest. Low-risk updates (base image digest, OpenCode minor/patch, action minor/patch/digest) are merged automatically once CI passes. Major updates stay manual: an OpenCode major (v3 or later) waits in the Renovate dependency dashboard until you approve it there, and action majors arrive as regular PRs you review and merge yourself.
 
-Every merge rebuilds `main` and `latest` (after the smoke test passes). To cut a release, tag the merged commit: `git tag v2.0.x && git push origin v2.0.x`. The tag must match `OPENCODE_VERSION` in the `Dockerfile` (without the `v` prefix).
+Every merge to `main` runs the smoke test, then builds and pushes the image tagged with the `OPENCODE_VERSION` from the `Dockerfile` (plus `latest`, `main`, and `sha-<commit>`). Merging a Renovate version bump is the release — no manual tagging needed.
 
 ## Files
 
 | Path | Purpose |
 | ---- | ------- |
 | `Dockerfile` | Template image (multi-arch: amd64 + arm64), base image pinned by digest |
-| `.github/workflows/publish.yml` | Smoke test + build + push to `ghcr.io` on tags, `main`, and PRs |
+| `.github/workflows/publish.yml` | Smoke test + build + push to `ghcr.io` on `main` (PRs: build + smoke test only) |
 | `renovate.json` | Automated update PRs (OpenCode version, base image digest, actions), automerges low-risk updates |

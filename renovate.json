@@ -19,13 +19,18 @@
     },
     {
       "matchPackageNames": ["@opencode/cli"],
-      "allowedVersions": "/^2\\./",
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     },
     {
+      "matchPackageNames": ["@opencode/cli"],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
       "matchManagers": ["github-actions"],
       "groupName": "github-actions",
+      "matchUpdateTypes": ["minor", "patch", "digest"],
       "automerge": true
     }
   ]

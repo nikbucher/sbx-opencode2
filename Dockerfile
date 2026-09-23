@@ -1,7 +1,7 @@
 # Docker Sandboxes template: pinned OpenCode v2 on the opencode-docker variant.
 # Build:  docker build -t sbx-opencode2:local .
 # Bump:   Renovate opens PRs for the base image digest and OPENCODE_VERSION;
-#         merge, then tag the commit as v<version> to release.
+#         merging to main publishes the version-tagged image.
 
 # renovate: datasource=docker depName=docker/sandbox-templates
 FROM docker/sandbox-templates:opencode-docker@sha256:ef636291701f88bbe1a268bd083175804a84309c14faf75bc8c2ed179ce61db3

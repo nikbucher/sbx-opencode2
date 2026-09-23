@@ -12,4 +12,4 @@ Follow Conventional Commits: `feat:`, `fix:`, `ci:`, `docs:`, `chore:` — imper
 
 ## Dependencies & releases
 
-Renovate opens dependency PRs (pinned OpenCode v2, base image digest, GitHub Actions) and automerges low-risk updates once CI passes — don't revert them without checking CI. Releases are git tags `v<version>` that must match `ARG OPENCODE_VERSION` in the `Dockerfile` (tag without the `v` prefix); CI smoke-tests and pushes the image to GHCR.
+Renovate opens dependency PRs (OpenCode version, base image digest, GitHub Actions) and automerges low-risk updates once CI passes — don't revert them without checking CI. Majors are manual: an OpenCode major needs approval in the Renovate dependency dashboard, action majors are reviewed like any other PR. Releases happen on merge to `main`: CI smoke-tests the image and pushes it to GHCR tagged with the `ARG OPENCODE_VERSION` from the `Dockerfile`, so merging a version bump is the release.
