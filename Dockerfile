@@ -4,7 +4,7 @@
 #         merging to main publishes the version-tagged image.
 
 # renovate: datasource=docker depName=docker/sandbox-templates
-FROM docker/sandbox-templates:opencode-docker@sha256:ef636291701f88bbe1a268bd083175804a84309c14faf75bc8c2ed179ce61db3
+FROM docker/sandbox-templates:opencode-docker@sha256:d23d51e1eaa7c23db723b3cd547fc998829b5c147579c512c7222efd30761fdd
 
 # renovate: datasource=npm depName=@opencode/cli
 ARG OPENCODE_VERSION=2.0.15
