@@ -7,10 +7,10 @@ The base image ships OpenCode V1 (npm package `opencode-ai`). This template swap
 ## Use it
 
 ```sh
-sbx run --template ghcr.io/nikbucher/sbx-opencode2:2.0.15 opencode
+sbx run --template ghcr.io/nikbucher/sbx-opencode2:latest opencode
 ```
 
-Images are built and pushed to GHCR by GitHub Actions on every push to `main` (PRs are built and smoke-tested but not pushed). New images have two tags: the pinned OpenCode version (currently `2.0.15`) and `latest`. Both tags are updated on subsequent merges, so `2.0.15` means "OpenCode 2.0.15 on the current base image" rather than a fixed build. Use an image digest to refer to a specific build. If the package is still private, store pull credentials once:
+Images are built and pushed to GHCR by GitHub Actions on every push to `main` (PRs are built and smoke-tested but not pushed). `latest` points to the most recently published image; replace it with an OpenCode version tag to choose a specific version. Both tags can be updated on subsequent merges, so use an image digest to refer to a specific build. If the package is still private, store pull credentials once:
 
 ```sh
 gh auth token | sbx secret set --registry ghcr.io --password-stdin
@@ -19,17 +19,17 @@ gh auth token | sbx secret set --registry ghcr.io --password-stdin
 ### Without a registry (local build)
 
 ```sh
-docker build -t sbx-opencode2:2.0.15 .
-docker image save sbx-opencode2:2.0.15 -o sbx-opencode2.tar
+docker build -t sbx-opencode2:local .
+docker image save sbx-opencode2:local -o sbx-opencode2.tar
 sbx template load sbx-opencode2.tar
-sbx run -t sbx-opencode2:2.0.15 opencode
+sbx run -t sbx-opencode2:local opencode
 ```
 
 ## Build and verify locally
 
 ```sh
 docker build -t sbx-opencode2:local .
-docker run --rm sbx-opencode2:local opencode --version   # -> 2.0.15
+docker run --rm sbx-opencode2:local opencode --version
 ```
 
 ## Bump the OpenCode version
