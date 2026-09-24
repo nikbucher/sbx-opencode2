@@ -1,0 +1,66 @@
+name: Cleanup GHCR images
+
+# Remove untagged builds older than 30 days. The action resolves multi-arch
+# manifests and attestations before deleting images; tagged releases and
+# `latest` are never selected. Legacy sha-/main/pr- tags can be removed
+# separately via a one-time manual run, without affecting the weekly policy.
+# Review a manual dry run, then set GHCR_CLEANUP_ENABLED=true as a repository
+# variable to enable scheduled deletion. The package must grant this repo
+# Admin access under Settings > Manage Actions access.
+
+on:
+  schedule:
+    - cron: "17 4 * * 1" # Mondays 04:17 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (only list candidates, delete nothing)"
+        type: boolean
+        default: true
+      legacy_tags:
+        description: "One-time removal of old sha-*, main and pr-* tags instead of untagged images"
+        type: boolean
+        default: false
+
+permissions:
+  packages: write
+
+concurrency:
+  group: cleanup-ghcr-images
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve dry-run mode
+        id: opts
+        env:
+          ENABLED: ${{ vars.GHCR_CLEANUP_ENABLED }}
+          MANUAL_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "$ENABLED" = "true" ]; then
+              echo "dry_run=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "dry_run=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "dry_run=$MANUAL_DRY_RUN" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Clean up untagged images
+        if: github.event_name == 'schedule' || !inputs.legacy_tags
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1
+        with:
+          delete-untagged: true
+          older-than: 30 days
+          dry-run: ${{ steps.opts.outputs.dry_run }}
+
+      - name: Remove legacy tags
+        if: github.event_name == 'workflow_dispatch' && inputs.legacy_tags
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1
+        with:
+          delete-tags: sha-*,main,pr-*
+          delete-untagged: false
+          dry-run: ${{ steps.opts.outputs.dry_run }}
