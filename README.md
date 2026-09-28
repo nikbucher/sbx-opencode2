@@ -2,7 +2,7 @@
 
 Docker Sandboxes template with a **pinned OpenCode v2** release, based on [`docker/sandbox-templates:opencode-docker`](https://docs.docker.com/ai/sandboxes/customize/templates/).
 
-The base image ships OpenCode V1 (npm package `opencode-ai`). This template swaps it for the V2 CLI (`@opencode/cli`) at a fixed version, so every sandbox starts with the exact same OpenCode release.
+The base image ships OpenCode V1 (npm package `opencode-ai`). This template swaps it for the V2 CLI (`@opencode/cli`) at a fixed version, so every sandbox starts with the exact same OpenCode release. The image is pinned; `/update` inside a running sandbox works but only upgrades that sandbox — the durable path to a newer OpenCode is a newer image tag.
 
 ## Use it
 

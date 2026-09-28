@@ -65,6 +65,11 @@ jobs:
           echo "expected=v${EXPECTED} actual=${ACTUAL}"
           echo "${ACTUAL}" | grep -q "v${EXPECTED}"
 
+      # The npm prefix is agent-owned in the base image; installing as root
+      # would leave the package root-owned and break in-sandbox self-updates.
+      - name: Smoke test (package writable by agent)
+        run: docker run --rm sbx-opencode2:smoke sh -c 'test -w "$NPM_CONFIG_PREFIX/lib/node_modules/@opencode/cli"'
+
       # Tag published images with the pinned OpenCode version, so an
       # automerged Renovate bump releases itself without a manual git tag.
       - name: Read OpenCode version from Dockerfile
