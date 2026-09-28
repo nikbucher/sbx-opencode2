@@ -15,10 +15,11 @@ LABEL org.opencontainers.image.licenses=MIT
 
 # The base image ships OpenCode V1 (npm package "opencode-ai").
 # Replace it with a pinned V2 release from the @opencode/cli package.
-USER root
+# Run the install as agent, not root: the base image's NPM_CONFIG_PREFIX
+# is agent-owned, and agent-owned package files are what make in-sandbox
+# self-updates (/update, opencode upgrade) work at all.
+USER agent
 RUN npm uninstall -g opencode-ai \
     && npm install -g "@opencode/cli@${OPENCODE_VERSION}" \
     && npm cache clean --force \
     && opencode --version
-
-USER agent
