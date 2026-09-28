@@ -9,6 +9,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  DH_REGISTRY: docker.io
+  DH_IMAGE: nikbucher/sbx-opencode2
 
 jobs:
   build-and-push:
@@ -35,6 +37,14 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.DH_REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # Smoke test: build the amd64 image and verify the pinned OpenCode
       # version runs before anything is published.
@@ -65,7 +75,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            ${{ env.DH_REGISTRY }}/${{ env.DH_IMAGE }}
           # Only the pinned OpenCode version and `latest`. No sha-/branch/
           # pr- tags: they flood the GHCR version list and old ones are a
           # chore to clean up. Traceability is kept via the git commit,
@@ -86,10 +98,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Generate artifact attestation
+      - name: Generate artifact attestation (GHCR)
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Generate artifact attestation (Docker Hub)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ${{ env.DH_REGISTRY }}/${{ env.DH_IMAGE }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
