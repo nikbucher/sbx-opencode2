@@ -16,7 +16,7 @@ sbx run --template ghcr.io/nikbucher/sbx-opencode2:latest opencode
 sbx run --template nikbucher/sbx-opencode2:latest opencode
 ```
 
-Images are built and pushed to [GHCR](https://github.com/nikbucher/sbx-opencode2/pkgs/container/sbx-opencode2) and [Docker Hub](https://hub.docker.com/r/nikbucher/sbx-opencode2) by GitHub Actions on every push to `main` (PRs are built and smoke-tested but not pushed). `latest` points to the most recently published image; replace it with an OpenCode version tag to choose a specific version. Both tags can be updated on subsequent merges, so use an image digest to refer to a specific build. The Docker Hub image is public and needs no pull credentials. If the GHCR package is still private, store pull credentials once:
+Images are built and pushed to [GHCR](https://github.com/nikbucher/sbx-opencode2/pkgs/container/sbx-opencode2) and [Docker Hub](https://hub.docker.com/r/nikbucher/sbx-opencode2) by GitHub Actions on every push to `main` that changes build-relevant files (`Dockerfile`, `.dockerignore`, the publish workflow); docs-only merges skip the build, and PRs with build-relevant changes are built and smoke-tested but not pushed. `latest` points to the most recently published image; replace it with an OpenCode version tag to choose a specific version. Both tags can be updated on subsequent merges, so use an image digest to refer to a specific build. The Docker Hub image is public and needs no pull credentials. If the GHCR package is still private, store pull credentials once:
 
 ```sh
 gh auth token | sbx secret set --registry ghcr.io --password-stdin

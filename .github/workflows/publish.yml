@@ -23,15 +23,70 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Full history so change detection can diff against the pushed-to
+          # or PR-base commit; the repo is small, so this is cheap.
+          fetch-depth: 0
+
+      # Skip the image build when nothing build-relevant changed, but keep
+      # the job green: `build-and-push` is a required check on main, so a
+      # skipped build must still report success. Keep the pattern in sync
+      # with build inputs: the Dockerfile copies nothing from the context
+      # except itself (see .dockerignore), so besides Dockerfile and
+      # .dockerignore only this workflow can change the image.
+      - name: Detect build-relevant changes
+        id: changes
+        env:
+          BEFORE: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          pattern='^(Dockerfile|\.dockerignore|\.github/workflows/publish\.yml)$'
+
+          base=''
+          case "${GITHUB_EVENT_NAME}" in
+            workflow_dispatch)
+              echo 'Manual run: building unconditionally.'
+              ;;
+            pull_request)
+              base="${BASE_SHA}"
+              ;;
+            push)
+              if printf '%s' "${BEFORE}" | grep -q '^0*$'; then
+                echo 'Push with no previous commit (new branch): building unconditionally.'
+              else
+                base="${BEFORE}"
+              fi
+              ;;
+          esac
+
+          build=true
+          if [ -n "${base}" ]; then
+            if ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+              echo "Base commit ${base} not found locally: building unconditionally."
+            elif printf '%s\n' "$(git diff --name-only "${base}...HEAD")" | grep -Eq "${pattern}"; then
+              echo 'Build-relevant files changed: building.'
+            else
+              build=false
+              {
+                echo '### Image build skipped'
+                echo ''
+                echo 'No build-relevant files changed (`Dockerfile`, `.dockerignore`, `.github/workflows/publish.yml`).'
+              } >> "${GITHUB_STEP_SUMMARY}"
+            fi
+          fi
+
+          echo "build=${build}" >> "${GITHUB_OUTPUT}"
 
       - name: Set up QEMU
+        if: steps.changes.outputs.build == 'true'
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
 
       - name: Set up Docker Buildx
+        if: steps.changes.outputs.build == 'true'
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: Log in to the Container registry
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && steps.changes.outputs.build == 'true'
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
           registry: ${{ env.REGISTRY }}
@@ -39,7 +94,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && steps.changes.outputs.build == 'true'
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
           registry: ${{ env.DH_REGISTRY }}
@@ -49,6 +104,7 @@ jobs:
       # Smoke test: build the amd64 image and verify the pinned OpenCode
       # version runs before anything is published.
       - name: Build amd64 image for smoke test
+        if: steps.changes.outputs.build == 'true'
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
         with:
           context: .
@@ -59,6 +115,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Smoke test (opencode --version)
+        if: steps.changes.outputs.build == 'true'
         run: |
           EXPECTED=$(sed -n 's/^ARG OPENCODE_VERSION=//p' Dockerfile)
           ACTUAL=$(docker run --rm sbx-opencode2:smoke opencode --version)
@@ -68,15 +125,18 @@ jobs:
       # The npm prefix is agent-owned in the base image; installing as root
       # would leave the package root-owned and break in-sandbox self-updates.
       - name: Smoke test (package writable by agent)
+        if: steps.changes.outputs.build == 'true'
         run: docker run --rm sbx-opencode2:smoke sh -c 'test -w "$NPM_CONFIG_PREFIX/lib/node_modules/@opencode/cli"'
 
       # Tag published images with the pinned OpenCode version, so an
       # automerged Renovate bump releases itself without a manual git tag.
       - name: Read OpenCode version from Dockerfile
+        if: steps.changes.outputs.build == 'true'
         id: version
         run: echo "version=$(sed -n 's/^ARG OPENCODE_VERSION=//p' Dockerfile)" >> "$GITHUB_OUTPUT"
 
       - name: Extract metadata (tags, labels)
+        if: steps.changes.outputs.build == 'true'
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
@@ -92,6 +152,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push Docker image
+        if: steps.changes.outputs.build == 'true'
         id: push
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
         with:
@@ -104,7 +165,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Generate artifact attestation (GHCR)
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && steps.changes.outputs.build == 'true'
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -112,7 +173,7 @@ jobs:
           push-to-registry: true
 
       - name: Generate artifact attestation (Docker Hub)
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && steps.changes.outputs.build == 'true'
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-name: ${{ env.DH_REGISTRY }}/${{ env.DH_IMAGE }}
