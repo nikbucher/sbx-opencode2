@@ -10,8 +10,10 @@ Run it from GHCR or Docker Hub:
 
 ```sh
 sbx run --template ghcr.io/nikbucher/sbx-opencode2:latest opencode
-# or
-sbx run --template docker.io/nikbucher/sbx-opencode2:latest opencode
+```
+
+```sh
+sbx run --template nikbucher/sbx-opencode2:latest opencode
 ```
 
 Images are built and pushed to [GHCR](https://github.com/nikbucher/sbx-opencode2/pkgs/container/sbx-opencode2) and [Docker Hub](https://hub.docker.com/r/nikbucher/sbx-opencode2) by GitHub Actions on every push to `main` (PRs are built and smoke-tested but not pushed). `latest` points to the most recently published image; replace it with an OpenCode version tag to choose a specific version. Both tags can be updated on subsequent merges, so use an image digest to refer to a specific build. The Docker Hub image is public and needs no pull credentials. If the GHCR package is still private, store pull credentials once:
