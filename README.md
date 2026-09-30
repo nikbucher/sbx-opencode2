@@ -12,17 +12,17 @@ The Docker Hub image is public — no pull credentials needed:
 sbx run --template nikbucher/sbx-opencode2:latest opencode
 ```
 
-Or from GHCR. If the package is still private, store pull credentials once:
-
-```sh
-sbx run --template ghcr.io/nikbucher/sbx-opencode2:latest opencode
-```
+For GHCR, store pull credentials first only if the package is private:
 
 ```sh
 gh auth token | sbx secret set --registry ghcr.io --password-stdin
 ```
 
-Pick a version with the tag: `latest` tracks the most recent publish, an OpenCode version tag like `:2.0.20` pins a specific release, and both move forward as new images are published — pin the image digest for a build that never changes.
+```sh
+sbx run --template ghcr.io/nikbucher/sbx-opencode2:latest opencode
+```
+
+`latest` tracks the most recent publish. An OpenCode version tag like `:2.0.20` fixes the OpenCode version but can point to a rebuilt image; pin the image digest to fix the exact image.
 
 ### Without a registry (local build)
 
@@ -42,13 +42,4 @@ docker run --rm sbx-opencode2:local opencode --version
 
 ## Releases and updates
 
-[Renovate](https://docs.renovatebot.com/) opens PRs for the pinned `@opencode/cli` version and base image digest; low-risk updates automerge once CI passes, majors wait for manual approval. Merging a version bump is the release — no manual tagging needed: CI smoke-tests and pushes the image tagged with the `OPENCODE_VERSION` from the `Dockerfile` and `latest` to both [GHCR](https://github.com/nikbucher/sbx-opencode2/pkgs/container/sbx-opencode2) and [Docker Hub](https://hub.docker.com/r/nikbucher/sbx-opencode2), as the same multi-arch manifest with identical digest. Merges that change nothing build-relevant skip the build. Details on the pipeline, attestations, and registry cleanup live in [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Files
-
-| Path | Purpose |
-| ---- | ------- |
-| `Dockerfile` | Template image (multi-arch: amd64 + arm64), base image pinned by digest |
-| `.github/workflows/publish.yml` | Smoke test + build + push to `ghcr.io` and Docker Hub on `main` (PRs: build + smoke test only; docs-only changes skip the build) |
-| `.github/workflows/cleanup-registry.yml` | Weekly opt-in cleanup of untagged images and one-time manual removal of legacy tags |
-| `renovate.json` | Automated update PRs (OpenCode version, base image digest, actions), automerges low-risk updates |
+Renovate proposes OpenCode and base-image updates; merging build-relevant changes to `main` publishes tested images tagged with the OpenCode version and `latest`. See [CONTRIBUTING.md](CONTRIBUTING.md) for release, CI, and maintenance details.
