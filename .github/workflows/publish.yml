@@ -38,23 +38,27 @@ jobs:
         id: changes
         env:
           BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           pattern='^(Dockerfile|\.dockerignore|\.github/workflows/publish\.yml)$'
 
           base=''
+          comparison=''
           case "${GITHUB_EVENT_NAME}" in
             workflow_dispatch)
               echo 'Manual run: building unconditionally.'
               ;;
             pull_request)
               base="${BASE_SHA}"
+              comparison="${base}...HEAD"
               ;;
             push)
               if printf '%s' "${BEFORE}" | grep -q '^0*$'; then
                 echo 'Push with no previous commit (new branch): building unconditionally.'
               else
                 base="${BEFORE}"
+                comparison="${base}..${AFTER}"
               fi
               ;;
           esac
@@ -63,15 +67,20 @@ jobs:
           if [ -n "${base}" ]; then
             if ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
               echo "Base commit ${base} not found locally: building unconditionally."
-            elif printf '%s\n' "$(git diff --name-only "${base}...HEAD")" | grep -Eq "${pattern}"; then
-              echo 'Build-relevant files changed: building.'
             else
-              build=false
-              {
-                echo '### Image build skipped'
-                echo ''
-                echo 'No build-relevant files changed (`Dockerfile`, `.dockerignore`, `.github/workflows/publish.yml`).'
-              } >> "${GITHUB_STEP_SUMMARY}"
+              # Keep diff outside the condition: errors must fail the step,
+              # never turn into a successful skip.
+              changed_files=$(git diff --name-only "${comparison}")
+              if printf '%s\n' "${changed_files}" | grep -Eq "${pattern}"; then
+                echo 'Build-relevant files changed: building.'
+              else
+                build=false
+                {
+                  echo '### Image build skipped'
+                  echo ''
+                  echo 'No build-relevant files changed (`Dockerfile`, `.dockerignore`, `.github/workflows/publish.yml`).'
+                } >> "${GITHUB_STEP_SUMMARY}"
+              fi
             fi
           fi
 

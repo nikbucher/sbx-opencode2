@@ -2,7 +2,19 @@
 
 ## CI: build and publish
 
-`.github/workflows/publish.yml` runs on every PR and every push to `main`. It first detects whether build-relevant files changed (`Dockerfile`, `.dockerignore`, the workflow itself): if they did, it smoke-tests the amd64 image — the OpenCode version must match the `Dockerfile` and the npm prefix must be writable by `agent`, which keeps in-sandbox self-updates working — then builds and pushes the multi-arch (amd64 + arm64) image to GHCR and Docker Hub with provenance attestations on both registries. Docs-only changes skip the build but the job still succeeds, so the required `build-and-push` check stays green. Manual runs (`workflow_dispatch`) always build; if the diff base is unavailable (new branch, missing commit), the build runs conservatively.
+`.github/workflows/publish.yml` runs on every PR and every push to `main`. It detects build-relevant changes (`Dockerfile`, `.dockerignore`, the workflow itself), comparing push endpoints with a two-dot diff and PRs against the merge base with a three-dot diff. Relevant changes trigger an amd64 smoke test — the OpenCode version must match the `Dockerfile` and the npm prefix must be writable by `agent` — and a multi-arch (amd64 + arm64) build. PRs build and test without publishing. Only relevant pushes to `main` and manual runs on `main` publish to GHCR and Docker Hub with provenance attestations, tagged with `OPENCODE_VERSION` from the `Dockerfile` and `latest`.
+
+Docs-only changes skip the build but the required `build-and-push` job still succeeds. Manual runs (`workflow_dispatch`) always build; runs on other branches do not publish. If the comparison base is unavailable (new branch, missing commit), the build runs conservatively. Actual diff errors fail the job rather than reporting a successful skip.
+
+## Files
+
+| Path | Purpose |
+| ---- | ------- |
+| `Dockerfile` | Template image (multi-arch: amd64 + arm64), base image pinned by digest |
+| `.dockerignore` | Limits the build context to the Dockerfile |
+| `.github/workflows/publish.yml` | Change detection, smoke tests, multi-arch build, and publication on `main` |
+| `.github/workflows/cleanup-registry.yml` | Weekly opt-in cleanup of untagged images and one-time manual removal of legacy tags |
+| `renovate.json` | Automated update PRs (OpenCode version, base image digest, actions), automerges low-risk updates |
 
 ## Registry cleanup
 
