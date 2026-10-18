@@ -110,8 +110,9 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Smoke test: build the amd64 image and verify the pinned OpenCode
-      # version runs before anything is published.
+      # Smoke test: build each platform image and verify the pinned OpenCode
+      # version runs before anything is published. arm64 runs under QEMU;
+      # both builds warm the cache for the multi-arch push below.
       - name: Build amd64 image for smoke test
         if: steps.changes.outputs.build == 'true'
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
@@ -119,7 +120,18 @@ jobs:
           context: .
           platforms: linux/amd64
           load: true
-          tags: sbx-opencode2:smoke
+          tags: sbx-opencode2:smoke-amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build arm64 image for smoke test
+        if: steps.changes.outputs.build == 'true'
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        with:
+          context: .
+          platforms: linux/arm64
+          load: true
+          tags: sbx-opencode2:smoke-arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -127,15 +139,41 @@ jobs:
         if: steps.changes.outputs.build == 'true'
         run: |
           EXPECTED=$(sed -n 's/^ARG OPENCODE_VERSION=//p' Dockerfile)
-          ACTUAL=$(docker run --rm sbx-opencode2:smoke opencode --version)
-          echo "expected=v${EXPECTED} actual=${ACTUAL}"
-          echo "${ACTUAL}" | grep -q "v${EXPECTED}"
+          for arch in amd64 arm64; do
+            ACTUAL=$(docker run --rm --platform "linux/${arch}" "sbx-opencode2:smoke-${arch}" opencode --version)
+            echo "${arch}: expected=v${EXPECTED} actual=${ACTUAL}"
+            echo "${ACTUAL}" | grep -q "v${EXPECTED}"
+          done
 
       # The npm prefix is agent-owned in the base image; installing as root
       # would leave the package root-owned and break in-sandbox self-updates.
       - name: Smoke test (package writable by agent)
         if: steps.changes.outputs.build == 'true'
-        run: docker run --rm sbx-opencode2:smoke sh -c 'test -w "$NPM_CONFIG_PREFIX/lib/node_modules/@opencode/cli"'
+        run: |
+          for arch in amd64 arm64; do
+            docker run --rm --platform "linux/${arch}" "sbx-opencode2:smoke-${arch}" sh -c 'test -w "$NPM_CONFIG_PREFIX/lib/node_modules/@opencode/cli"'
+          done
+
+      # The package nests a ~200 MB binary per libc variant; the Dockerfile
+      # drops them after the postinstall. Fail if they come back, e.g. after
+      # an upstream layout change makes the rm miss them. One binary is
+      # ~200 MB, so 300 MB leaves headroom without hiding a second one.
+      - name: Smoke test (no nested platform binaries)
+        if: steps.changes.outputs.build == 'true'
+        run: |
+          for arch in amd64 arm64; do
+            docker run --rm --platform "linux/${arch}" "sbx-opencode2:smoke-${arch}" sh -euc '
+              pkg="$NPM_CONFIG_PREFIX/lib/node_modules/@opencode"
+              for dir in "$pkg"/cli/node_modules/@opencode/cli-* "$pkg"/cli-*; do
+                if [ -e "$dir" ]; then
+                  echo "platform package present: $dir"; exit 1
+                fi
+              done
+              size=$(du -sm "$pkg" | cut -f1)
+              echo "'"${arch}"': @opencode is ${size} MB"
+              test "$size" -lt 300
+            '
+          done
 
       # Tag published images with the pinned OpenCode version, so an
       # automerged Renovate bump releases itself without a manual git tag.
