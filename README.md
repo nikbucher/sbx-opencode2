@@ -2,7 +2,7 @@
 
 Run OpenCode v2 in [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/customize/templates/) with a consistent starting version, on amd64 and arm64.
 
-The base template ships OpenCode V1; this image swaps in the pinned V2 CLI, so every sandbox starts with the exact same OpenCode release. `/update` inside a running sandbox upgrades only that sandbox — the durable path to a newer OpenCode is a newer image tag.
+The image builds on the `shell-docker` sandbox template and adds the pinned OpenCode V2 CLI, so every sandbox starts with the exact same OpenCode release. `/update` inside a running sandbox upgrades only that sandbox — the durable path to a newer OpenCode is a newer image tag.
 
 ## Use it
 
