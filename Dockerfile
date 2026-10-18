@@ -20,14 +20,17 @@ LABEL org.opencontainers.image.licenses=MIT
 # Run the install as agent, not root: the base image's NPM_CONFIG_PREFIX
 # is agent-owned, and agent-owned package files are what make in-sandbox
 # self-updates (/update, opencode upgrade) work at all.
-# The platform packages carry no libc field, so npm installs several linux
-# variants (glibc/musl x baseline, ~200 MB each) even with --omit=optional.
-# The postinstall already put the matching binary into bin/, so drop the
-# nested platform packages afterwards.
+# The platform binaries are optionalDependencies without a libc field, so
+# npm installs both the glibc and musl variant (~200 MB each). The package
+# has no other dependencies, and the postinstall hard-links (or copies) the
+# matching binary into bin/, so its nested node_modules can go entirely.
+# The empty config dir matches opencode-docker, which ships it agent-owned.
 USER agent
-RUN npm install -g --omit=optional "@opencode/cli@${OPENCODE_VERSION}" \
+RUN npm install -g "@opencode/cli@${OPENCODE_VERSION}" \
     && rm -rf "$(npm root -g)/@opencode/cli/node_modules" \
     && npm cache clean --force \
+    && mkdir -p "$HOME/.config/opencode" \
     && opencode --version
 
+# shell-docker defaults to bash; restore opencode-docker's default command.
 CMD ["opencode"]
