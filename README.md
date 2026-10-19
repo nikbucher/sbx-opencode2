@@ -1,5 +1,11 @@
 # sbx-opencode2
 
+[![Publish template image](https://github.com/nikbucher/sbx-opencode2/actions/workflows/publish.yml/badge.svg)](https://github.com/nikbucher/sbx-opencode2/actions/workflows/publish.yml)
+[![Docker Image Version](https://img.shields.io/docker/v/nikbucher/sbx-opencode2?sort=semver&label=opencode%20version)](https://hub.docker.com/r/nikbucher/sbx-opencode2)
+[![Platform](https://img.shields.io/badge/platform-amd64%20%7C%20arm64-blue)](https://docs.docker.com/build/building/multi-platform/)
+[![OpenCode](https://img.shields.io/badge/OpenCode-v2-DEA584)](https://github.com/sst/opencode)
+[![License: MIT](https://img.shields.io/github/license/nikbucher/sbx-opencode2)](LICENSE)
+
 Run OpenCode v2 in [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/customize/templates/) with a consistent starting version, on amd64 and arm64.
 
 The image builds on the `shell-docker` sandbox template and adds the pinned OpenCode V2 CLI, so every sandbox starts with the exact same OpenCode release. `/update` inside a running sandbox upgrades only that sandbox — the durable path to a newer OpenCode is a newer image tag. The image keeps only the binary for its platform; an in-sandbox update reinstalls the unused libc variant too, adding ~200 MB to that sandbox.
