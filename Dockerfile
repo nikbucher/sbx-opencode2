@@ -7,7 +7,7 @@
 # compressed). An npm uninstall on top of opencode-docker would only add
 # whiteouts; the V1 layer would still ship in the image.
 # renovate: datasource=docker depName=docker/sandbox-templates
-FROM docker/sandbox-templates:shell-docker@sha256:1560168ac5fb9ce23d413c878349334c5845c07e264cd675d7867f0c78ad1761
+FROM docker/sandbox-templates:shell-docker@sha256:b178ca62ec2e79af2a044e3ec321bdb72188690e1c15d573ea5524b397554d3d
 
 # renovate: datasource=npm depName=@opencode/cli
 ARG OPENCODE_VERSION=2.1.4
