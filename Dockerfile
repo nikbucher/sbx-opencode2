@@ -10,7 +10,7 @@
 FROM docker/sandbox-templates:shell-docker@sha256:b178ca62ec2e79af2a044e3ec321bdb72188690e1c15d573ea5524b397554d3d
 
 # renovate: datasource=npm depName=@opencode/cli
-ARG OPENCODE_VERSION=2.2.2
+ARG OPENCODE_VERSION=2.2.3
 
 LABEL org.opencontainers.image.source=https://github.com/nikbucher/sbx-opencode2
 LABEL org.opencontainers.image.description="Docker Sandboxes template with a pinned OpenCode v2 release"
