@@ -51,7 +51,7 @@ jobs:
 
       - name: Clean up untagged images
         if: github.event_name == 'schedule' || !inputs.legacy_tags
-        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1
+        uses: dataaxiom/ghcr-cleanup-action@ac45a8c04b1eb4b27974ca79a0a74f344c93664b # v1
         with:
           delete-untagged: true
           older-than: 30 days
@@ -59,7 +59,7 @@ jobs:
 
       - name: Remove legacy tags
         if: github.event_name == 'workflow_dispatch' && inputs.legacy_tags
-        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1
+        uses: dataaxiom/ghcr-cleanup-action@ac45a8c04b1eb4b27974ca79a0a74f344c93664b # v1
         with:
           delete-tags: sha-*,main,pr-*
           delete-untagged: false
